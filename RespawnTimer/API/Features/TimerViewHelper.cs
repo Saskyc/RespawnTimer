@@ -1,3 +1,6 @@
+using Respawning.Waves;
+using RespawnTimer.API.Extensions;
+
 namespace RespawnTimer.API.Features;
 
 using System;
@@ -6,14 +9,9 @@ using System.Linq;
 using GameCore;
 using PlayerRoles;
 using PlayerRoles.PlayableScps.Scp079;
-using Respawning;
 using UnityEngine;
-#if EXILED
 using Exiled.API.Enums;
 using Exiled.API.Features;
-#else
-    using PluginAPI.Core;
-#endif
 
 public partial class TimerView
 {
@@ -40,85 +38,62 @@ public partial class TimerView
 
     private void SetMinutesAndSeconds()
     {
-        TimeSpan time = TimeSpan.FromSeconds(RespawnManager.Singleton._timeForNextSequence - RespawnManager.Singleton._stopwatch.Elapsed.TotalSeconds);
+        //TimeSpan time = TimeSpan.FromSeconds(RespawnManager.Singleton._timeForNextSequence - RespawnManager.Singleton._stopwatch.Elapsed.TotalSeconds);
 
-        if (RespawnManager.Singleton._curSequence is RespawnManager.RespawnSequencePhase.PlayingEntryAnimations or RespawnManager.RespawnSequencePhase.SpawningSelectedTeam ||
-            !Properties.TimerOffset)
-        {
-            int minutes = (int)time.TotalSeconds / 60;
-            StringBuilder.Replace("{minutes}", $"{(Properties.LeadingZeros && minutes < 10 ? "0" : string.Empty)}{minutes}");
+        var timet = WaveManagerExtension.RespawnIn();
+        if (timet is null) return;
+        
+        var time = timet.Value;
 
-            int seconds = (int)Math.Round(time.TotalSeconds % 60);
-            StringBuilder.Replace("{seconds}", $"{(Properties.LeadingZeros && seconds < 10 ? "0" : string.Empty)}{seconds}");
-        }
-        else
-        {
-            int offset = RespawnTokensManager.Counters[1].Amount >= 50 ? 18 : 14;
-
-            int minutes = (int)(time.TotalSeconds + offset) / 60;
-            StringBuilder.Replace("{minutes}", $"{(Properties.LeadingZeros && minutes < 10 ? "0" : string.Empty)}{minutes}");
-
-            int seconds = (int)Math.Round((time.TotalSeconds + offset) % 60);
-            StringBuilder.Replace("{seconds}", $"{(Properties.LeadingZeros && seconds < 10 ? "0" : string.Empty)}{seconds}");
-        }
+        int minutes = (int)time / 60;
+        StringBuilder.Replace("{minutes}", $"{(Properties.LeadingZeros && minutes < 10 ? "0" : string.Empty)}{minutes}");
+            
+        int seconds = (int)Math.Round(time % 60);
+        StringBuilder.Replace("{seconds}", $"{(Properties.LeadingZeros && seconds < 10 ? "0" : string.Empty)}{seconds}");
     }
 
+    /// <summary>
+    /// This is logic for API such as Serpents Hand & UIU, should replace them though the API
+    /// is not good at all, so I've said fuck it and delted this.
+    /// </summary>
     private void SetSpawnableTeam()
     {
-        switch (Respawn.NextKnownTeam)
-        {
-            case SpawnableTeamType.None:
-                return;
-
-#if EXILED
-            case SpawnableTeamType.NineTailedFox:
-                StringBuilder.Replace("{team}", !API.UiuSpawnable ? Properties.Ntf : Properties.Uiu);
-                break;
-
-            case SpawnableTeamType.ChaosInsurgency:
-                StringBuilder.Replace("{team}", !API.SerpentsHandSpawnable ? Properties.Ci : Properties.Sh);
-                break;
-#else
-            case SpawnableTeamType.NineTailedFox:
-                StringBuilder.Replace("{team}", Properties.Ntf);
-                break;
-
-            case SpawnableTeamType.ChaosInsurgency:
-                StringBuilder.Replace("{team}", Properties.Ci);
-                break;
-#endif
-        }
+        var nextKnownWave = Respawn.NextKnownSpawnableFaction;
     }
 
     private void SetSpectatorCountAndSpawnChance(int? spectatorCount = null)
     {
-#if EXILED
+        
         StringBuilder.Replace("{spectators_num}", spectatorCount?.ToString() ?? Player.List.Count(x => x.Role.Team == Team.Dead && !x.IsOverwatchEnabled).ToString());
-#else
-        StringBuilder.Replace("{spectators_num}", spectatorCount?.ToString() ?? Player.GetPlayers().Count(x => x.Role == RoleTypeId.Spectator && !x.IsOverwatchEnabled).ToString());
-#endif
         // Backwards compatibility
         StringBuilder.Replace("{ntf_tickets_num}", "{ntf_spawn_chance}");
         StringBuilder.Replace("{ci_tickets_num}", "{ci_spawn_chance}");
         //
-
-        StringBuilder.Replace("{ntf_spawn_chance}", Mathf.Round(RespawnTokensManager.Counters[1].Amount).ToString());
-        StringBuilder.Replace("{ci_spawn_chance}", Mathf.Round(RespawnTokensManager.Counters[0].Amount).ToString());
+        
+        if(WaveManagerGenericHelper.GetRespawnTokens<NtfSpawnWave>().HasValue)
+            StringBuilder.Replace("{ntf_spawn_chance}",
+                Mathf.Round(WaveManagerGenericHelper.GetRespawnTokens<NtfSpawnWave>().Value).ToString());
+        
+        if(WaveManagerGenericHelper.GetRespawnTokens<ChaosSpawnWave>().HasValue)
+            StringBuilder.Replace("{ci_spawn_chance}", 
+                Mathf.Round(WaveManagerGenericHelper.GetRespawnTokens<ChaosSpawnWave>().Value).ToString());
+        
+        if(WaveManagerGenericHelper.GetRespawnTokens<NtfMiniWave>().HasValue)
+            StringBuilder.Replace("{mini_ntf_spawn_chance}", 
+                Mathf.Round(WaveManagerGenericHelper.GetRespawnTokens<NtfMiniWave>().Value).ToString());
+        
+        if(WaveManagerGenericHelper.GetRespawnTokens<ChaosMiniWave>().HasValue)
+            StringBuilder.Replace("{mini_ci_spawn_chance}", 
+                Mathf.Round(WaveManagerGenericHelper.GetRespawnTokens<ChaosMiniWave>().Value).ToString());
     }
 
     private void SetWarheadStatus()
     {
-#if EXILED
         WarheadStatus warheadStatus = Warhead.Status;
-        StringBuilder.Replace("{warhead_status}", Properties.WarheadStatus[warheadStatus]);
+        StringBuilder.Replace("{warhead_status}", Properties.WarheadStatus[warheadStatus.ToString()]);
         StringBuilder.Replace(
             "{detonation_time}",
             warheadStatus == WarheadStatus.InProgress ? Mathf.Round(Warhead.DetonationTimer).ToString(CultureInfo.InvariantCulture) : string.Empty);
-#else
-        string warheadStatus = Warhead.IsDetonationInProgress ? Warhead.IsDetonated ? "Detonated" : "InProgress" : Warhead.LeverStatus ? "Armed" : "NotArmed";
-        StringBuilder.Replace("{warhead_status}", Properties.WarheadStatus[warheadStatus]);
-        StringBuilder.Replace("{detonation_time}", warheadStatus == "InProgress" ? Mathf.Round(Warhead.DetonationTime).ToString(CultureInfo.InvariantCulture) : string.Empty);
-#endif
     }
 
     private void SetGeneratorCount()

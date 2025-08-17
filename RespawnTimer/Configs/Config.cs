@@ -1,4 +1,6 @@
-﻿namespace RespawnTimer.Configs
+﻿using Exiled.API.Interfaces;
+
+namespace RespawnTimer.Configs
 {
     using System.Collections.Generic;
     using System.ComponentModel;
@@ -8,6 +10,7 @@
 #else
     public sealed class Config
 #endif
+        : IConfig
     {
         [Description("Whether the plugin is enabled.")]
         public bool IsEnabled { get; set; } = true;

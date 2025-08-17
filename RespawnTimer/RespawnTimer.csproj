@@ -15,6 +15,14 @@
     <PropertyGroup Condition=" '$(Configuration)' == 'NWAPI' ">
         <TargetName>RespawnTimer-NW</TargetName>
     </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <DebugType>embedded</DebugType>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DebugType>embedded</DebugType>
+    </PropertyGroup>
     
     <ItemGroup>
         <Reference Include="Assembly-CSharp-firstpass" HintPath="$(EXILED_REFERENCES)\Assembly-CSharp-firstpass.dll" />
@@ -32,7 +40,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Condition=" '$(Configuration)' == 'EXILED' " Include="EXILED" Version="8.9.6" />
+        <PackageReference Include="ExMod.Exiled" Version="9.8.1" />
         <PackageReference Condition=" '$(Configuration)' == 'NWAPI' " Include="Northwood.PluginAPI" Version="13.1.2" />
     </ItemGroup>
 

@@ -1,4 +1,6 @@
-﻿namespace RespawnTimer.API.Features
+﻿using RespawnTimer.Main;
+
+namespace RespawnTimer.API.Features
 {
     using System.Collections.Generic;
     using System.IO;
@@ -7,12 +9,7 @@
     using Respawning;
     using Serialization;
     using UnityEngine;
-#if EXILED
     using Exiled.API.Features;
-    using Exiled.Loader;
-#else
-    using PluginAPI.Core;
-#endif
 
     public partial class TimerView
     {
@@ -27,7 +24,7 @@
             if (CachedTimers.ContainsKey(name))
                 return;
 
-            string directoryPath = Path.Combine(RespawnTimer.RespawnTimerDirectoryPath, name);
+            string directoryPath = Path.Combine(Helper.RespawnTimerDirectoryPath, name);
             if (!Directory.Exists(directoryPath))
             {
                 Log.Error($"{name} directory does not exist!");
@@ -65,32 +62,42 @@
                 File.ReadAllText(timerDuringPath),
                 YamlParser.Deserializer.Deserialize<Properties>(File.ReadAllText(propertiesPath)),
                 hints);
-
+            
+            Log.Info($"Added {name}");
             CachedTimers.Add(name, timerView);
         }
 
         public static bool TryGetTimerForPlayer(Player player, out TimerView timerView)
         {
-            string groupName = !ServerStatic.PermissionsHandler._members.TryGetValue(player.UserId, out string str) ? null : str;
+            string groupName = !ServerStatic.PermissionsHandler.Members.TryGetValue(player.UserId, out string str) ? null : str;
 
             // Check by group name
-            if (groupName is not null && RespawnTimer.Singleton.Config.Timers.TryGetValue(groupName, out string timerName))
+            if (groupName is not null && Main.RespawnTimer.Instance.Config.Timers.TryGetValue(groupName, out string timerName))
             {
                 timerView = CachedTimers[timerName];
+                if (timerView is null) return false;
                 return true;
             }
 
             // Check by user id
-            if (RespawnTimer.Singleton.Config.Timers.TryGetValue(player.UserId, out timerName))
+            if (Main.RespawnTimer.Instance.Config.Timers.TryGetValue(player.UserId, out timerName))
             {
                 timerView = CachedTimers[timerName];
+                if (timerView is null) return false;
                 return true;
             }
 
+            
             // Use fallback default timer
-            if (RespawnTimer.Singleton.Config.Timers.TryGetValue("default", out timerName))
+            if (Main.RespawnTimer.Instance.Config.Timers.TryGetValue("default", out timerName))
             {
+                if (!CachedTimers.ContainsKey(timerName))
+                {
+                    timerView = null;
+                    return false;
+                }
                 timerView = CachedTimers[timerName];
+                if (timerView is null) return false;
                 return true;
             }
 
@@ -102,10 +109,7 @@
         public string GetText(int? spectatorCount = null)
         {
             StringBuilder.Clear();
-            StringBuilder.Append(
-                RespawnManager.Singleton._curSequence is not RespawnManager.RespawnSequencePhase.PlayingEntryAnimations or RespawnManager.RespawnSequencePhase.SpawningSelectedTeam
-                    ? BeforeRespawnString
-                    : DuringRespawnString);
+            StringBuilder.Append(WaveManager.State is WaveQueueState.WaveSpawning ?  DuringRespawnString : BeforeRespawnString);
 
             SetAllProperties(spectatorCount);
             StringBuilder.Replace("{RANDOM_COLOR}", $"#{Random.Range(0x0, 0xFFFFFF):X6}");
