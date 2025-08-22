@@ -1,4 +1,4 @@
-# RespawnTimer ![Downloads](https://img.shields.io/github/downloads/Michal78900/RespawnTimer/total)
+# RespawnTimer ![img](https://img.shields.io/github/downloads/Saskyc/RespawnTimer/total?style=for-the-badge)
 A SCP: Secret Laboratory plugin that shows when the next respawn wave will happen.
 
 # Features
