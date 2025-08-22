@@ -17,7 +17,7 @@
                 Exiled.API.Enums.WarheadStatus.Armed, "<color=orange>Armed</color>"
             },
             {
-                Exiled.API.Enums.WarheadStatus.InProgress, "<color=red>In Progress - </color> {detonation_time} s"
+                Exiled.API.Enums.WarheadStatus.InProgress, "<color=red>In Progress - </color>"
             },
             {
                 Exiled.API.Enums.WarheadStatus.Detonated, "<color=#640000>Detonated</color>"

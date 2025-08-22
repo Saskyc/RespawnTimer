@@ -42,7 +42,7 @@ namespace RespawnTimer.Main
 
         public override string Name => "RespawnTimer";
         public override string Author => "Michal78900";
-        public override Version Version => new(4, 1, 0);
+        public override Version Version => new(4, 1, 1);
         public override Version RequiredExiledVersion => new(9, 8, 1);
         public override PluginPriority Priority => PluginPriority.Last;
     }

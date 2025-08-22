@@ -28,7 +28,8 @@ public abstract class Placeholder
         Type[] types = assembly.GetTypes();
         foreach (var type in types)
         {
-            if (!type.IsSubclassOf(typeof(Placeholder)) || type.IsAbstract) continue;
+            if (!type.IsSubclassOf(typeof(Placeholder)) || type.IsAbstract || type.Name == "DynamicPlaceholder") continue;
+            
             var instance = (Placeholder)Activator.CreateInstance(type);
             instance.Assembly = assembly;
             List.Add(instance);
