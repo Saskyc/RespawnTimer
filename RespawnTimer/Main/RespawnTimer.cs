@@ -22,12 +22,10 @@ namespace RespawnTimer.Main
             Instance = this;
             Helper.FileManager();
             Exiled.Events.Handlers.Map.Generated += EventHandler.OnGenerated;
-            Exiled.Events.Handlers.Player.Dying += EventHandler.OnDying;
-            Exiled.Events.Handlers.Server.RoundStarted += EventHandler.RoundStarted;
-
+            Exiled.Events.Handlers.Player.Verified += EventHandler.OnVerified;
+            Placeholder.RegisterAll();
             Helper.ReloadTimer();
             Initialize.Indeed();
-            Coroutine.Start();
             
             base.OnEnabled();
         }
@@ -37,17 +35,14 @@ namespace RespawnTimer.Main
             Instance = null;
             
             Exiled.Events.Handlers.Map.Generated -= EventHandler.OnGenerated;
-            Exiled.Events.Handlers.Player.Dying -= EventHandler.OnDying;
-            Exiled.Events.Handlers.Server.RoundStarted -= EventHandler.RoundStarted;
-            
-            Coroutine.Kill();
-
+            Exiled.Events.Handlers.Player.Verified -= EventHandler.OnVerified;
+            Placeholder.UnregisterAll();
             base.OnDisabled();
         }
 
         public override string Name => "RespawnTimer";
         public override string Author => "Michal78900";
-        public override Version Version => new(4, 0, 5);
+        public override Version Version => new(4, 1, 0);
         public override Version RequiredExiledVersion => new(9, 8, 1);
         public override PluginPriority Priority => PluginPriority.Last;
     }

@@ -3,8 +3,6 @@ using RespawnTimer.API.Features.ExternalTeams;
 
 namespace RespawnTimer.API
 {
-    
-
     public static class API
     {
         public static List<string> TimerHidden { get; } = new();

@@ -11,14 +11,49 @@ namespace RespawnTimer.API.Features
     using UnityEngine;
     using Exiled.API.Features;
 
-    public partial class TimerView
+    public class TimerManager
     {
-        public static readonly Dictionary<string, TimerView> CachedTimers = new();
+        public static readonly Dictionary<string, TimerManager> CachedTimers = new();
+    
+        public static bool TryGetTimerForPlayer(Player player, out TimerManager timerManager)
+        {
+            string groupName = !ServerStatic.PermissionsHandler.Members.TryGetValue(player.UserId, out string str) ? null : str;
 
-        public int HintIndex { get; private set; }
+            // Check by group name
+            if (groupName is not null && Main.RespawnTimer.Instance.Config.Timers.TryGetValue(groupName, out string timerName))
+            {
+                timerManager = CachedTimers[timerName];
+                if (timerManager is null) return false;
+                return true;
+            }
 
-        private int HintInterval { get; set; }
+            // Check by user id
+            if (Main.RespawnTimer.Instance.Config.Timers.TryGetValue(player.UserId, out timerName))
+            {
+                timerManager = CachedTimers[timerName];
+                if (timerManager is null) return false;
+                return true;
+            }
 
+            
+            // Use fallback default timer
+            if (Main.RespawnTimer.Instance.Config.Timers.TryGetValue("default", out timerName))
+            {
+                if (!CachedTimers.ContainsKey(timerName))
+                {
+                    timerManager = null;
+                    return false;
+                }
+                timerManager = CachedTimers[timerName];
+                if (timerManager is null) return false;
+                return true;
+            }
+
+            // Default fallback does not exist
+            timerManager = null!;
+            return false;
+        }
+        
         public static void AddTimer(string name)
         {
             if (CachedTimers.ContainsKey(name))
@@ -57,85 +92,27 @@ namespace RespawnTimer.API.Features
             if (File.Exists(hintsPath))
                 hints.AddRange(File.ReadAllLines(hintsPath));
 
-            TimerView timerView = new(
+            TimerManager timerManager = new(
                 File.ReadAllText(timerBeforePath),
                 File.ReadAllText(timerDuringPath),
                 YamlParser.Deserializer.Deserialize<Properties>(File.ReadAllText(propertiesPath)),
                 hints);
-            
-            Log.Info($"Added {name}");
-            CachedTimers.Add(name, timerView);
+            CachedTimers.Add(name, timerManager);
         }
 
-        public static bool TryGetTimerForPlayer(Player player, out TimerView timerView)
-        {
-            string groupName = !ServerStatic.PermissionsHandler.Members.TryGetValue(player.UserId, out string str) ? null : str;
-
-            // Check by group name
-            if (groupName is not null && Main.RespawnTimer.Instance.Config.Timers.TryGetValue(groupName, out string timerName))
-            {
-                timerView = CachedTimers[timerName];
-                if (timerView is null) return false;
-                return true;
-            }
-
-            // Check by user id
-            if (Main.RespawnTimer.Instance.Config.Timers.TryGetValue(player.UserId, out timerName))
-            {
-                timerView = CachedTimers[timerName];
-                if (timerView is null) return false;
-                return true;
-            }
-
-            
-            // Use fallback default timer
-            if (Main.RespawnTimer.Instance.Config.Timers.TryGetValue("default", out timerName))
-            {
-                if (!CachedTimers.ContainsKey(timerName))
-                {
-                    timerView = null;
-                    return false;
-                }
-                timerView = CachedTimers[timerName];
-                if (timerView is null) return false;
-                return true;
-            }
-
-            // Default fallback does not exist
-            timerView = null!;
-            return false;
-        }
-
-        public string GetText(int? spectatorCount = null)
+        public string GetText(TimerPlayer timerPlayer)
         {
             StringBuilder.Clear();
             StringBuilder.Append(WaveManager.State is WaveQueueState.WaveSpawning ?  DuringRespawnString : BeforeRespawnString);
+            
+            var builder = Placeholder.FormText(StringBuilder, timerPlayer);
+            
+            builder.Replace('{', '[').Replace('}', ']');
 
-            SetAllProperties(spectatorCount);
-            StringBuilder.Replace("{RANDOM_COLOR}", $"#{Random.Range(0x0, 0xFFFFFF):X6}");
-            StringBuilder.Replace('{', '[').Replace('}', ']');
-
-            return StringBuilder.ToString();
+            return builder.ToString();
         }
-
-        internal void IncrementHintInterval()
-        {
-            HintInterval++;
-            if (HintInterval != Properties.HintInterval)
-                return;
-
-            HintInterval = 0;
-            IncrementHintIndex();
-        }
-
-        private void IncrementHintIndex()
-        {
-            HintIndex++;
-            if (Hints.Count == HintIndex)
-                HintIndex = 0;
-        }
-
-        private TimerView(string beforeRespawnString, string duringRespawnString, Properties properties, List<string> hints)
+        
+        private TimerManager(string beforeRespawnString, string duringRespawnString, Properties properties, List<string> hints)
         {
             BeforeRespawnString = beforeRespawnString;
             DuringRespawnString = duringRespawnString;
